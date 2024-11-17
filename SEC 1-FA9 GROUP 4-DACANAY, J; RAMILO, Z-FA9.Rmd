@@ -1,0 +1,273 @@
+---
+title: "Exploring the Influence of Gender and Education Levels on Political Interest"
+output: github_document
+---
+
+## Introduction
+
+A study was conducted to explore whether people's political interest is influenced by their gender and education level. Fifty-eight participants were selected, and their gender, education level, and political interest were recorded. There are two levels for gender (male and female) and three levels for education level (school-educated, college-educated, and university-educated).
+
+## Data Summary
+
+```{r}
+# Loading Packages
+suppressMessages(library(tidyverse))
+library(tidyverse)
+suppressMessages(library(readr))
+library(readr)
+suppressMessages(library(car))
+library(car)
+suppressMessages(library(Hmisc))
+library(Hmisc)
+library(dplyr)
+library(knitr)
+
+# Reading the csv file
+politicalInterest <- read_csv("Political Interest.csv", show_col_types = FALSE)
+
+# Data Table
+result <- politicalInterest %>%
+  group_by(gender, education_level) %>%
+  summarise(political_interest = paste(political_interest, collapse = ", "), .groups = 'drop')
+
+kable(result)
+```
+
+In this study, we have three variables: two independent and one dependent. The variables are as follows:
+
+#### Gender (Independent Variable)
+
+```{r}
+politicalInterest$gender
+```
+
+The dataset shown above is the `Gender` variable, which is one of the independent variables in the study. As indicated by its name, it contains the gender of each participant, recorded as either 1 or 2 (male or female).
+
+#### Education Level (Independent Variable)
+
+```{r}
+politicalInterest$education_level
+```
+
+The dataset shown above is the `Education Level` variable, which is one of the independent variables in the study. As indicated by its name, it contains the education level of each participant, recorded as either 1, 2, or 3 (school-educated, college-educated, or university-educated)
+
+#### Political Interest (Dependent Variable)
+
+```{r}
+politicalInterest$political_interest
+```
+
+The dataset shown above is the `Political Interest` variable, which is one of the dependent variables in the study. As indicated by its name, it contains the level of political interest of each participant, recorded on an interval scale ranging from 1 to 100.
+
+#### Converting the Independent Variables to Factors
+```{r}
+str(politicalInterest)
+```
+
+```{r}
+# Convert 'gender' and 'education_level' to factors
+politicalInterest$gender <- factor(politicalInterest$gender, levels = c(1, 2), labels = c("Gender 1", "Gender 2"))
+politicalInterest$education_level <- factor(politicalInterest$education_level, levels = c(1, 2, 3), labels = c("school-educated", "college-educated", "university-educated"))
+
+# Check the structure again to ensure the conversion worked
+str(politicalInterest)
+```
+
+## Hypotheses
+#### Null Hypotheses:
+
+-   $H_0$: There is no main effect of gender on political interest.
+-   $H_0$: There is no significant difference between the groups of the second factor.
+-   $H_0$: There is no significant interaction effect on political interest between gender and education level.
+
+#### Alternative Hypotheses:
+
+-   $H_1$: There is a significant difference between the groups of the first factor.
+-   $H_1$: There is a significant difference between the groups of the second factor.
+-   $H_1$: There is a significant interaction effect on political interest between gender and education level.
+
+
+## Methodology
+**Statistical Treatment:** Two-Way Analysis Of Variance (ANOVA)
+
+**Rationale:**
+
+1.  **Two Independent Variables (Factors)**
+    -   The study contains two independent variables or factors:
+        -   Gender (2 levels: Male or Female)
+        -   Education Level (3 levels: school-educated, college-educated, or university-educated)
+    -   The purpose of Two-Way ANOVA is to determine the main effects of each of these two factors (gender and education level) on the dependent variable (political interest), as well as any interaction effect between the two factors.
+    
+2.  **Main Effects of Education Level and Gender**
+    -   The study aims to understand how each independent variable affects political interest. Specifically, we want to examine:
+        -   Does gender (male or female) significantly affect political interest?
+        -   Does education level (e.g., school-educated, college-educated, university-educated) significantly influence political interest?
+    -   Each of these factors might have an individual (main) effect on political interest, and Two-Way ANOVA is designed to test these effects simultaneously.
+    
+3.  **Interaction Between Education Level and Gender**
+    -   One of the key advantages of using Two-Way ANOVA is its ability to test for interaction effects. In the case of this study, we are interested in whether the relationship between education level and political interest differs depending on gender.
+        -   For example, the impact of being university-educated on political interest might be different for males compared to females.
+    -   A Two-Way ANOVA tests whether the effect of education level on political interest is the same across gender or whether there’s a significant interaction—meaning the combination of gender and education level produces an effect on political interest that is not simply the sum of the individual main effects.
+
+
+## Checking the Assumptions
+1.  **A dependent continuous variable**
+
+```{r}
+class(politicalInterest$political_interest)
+typeof(politicalInterest$political_interest)
+```
+
+It is concluded that the dependent variable, which is the `Political Interest`, is a continuous variable since its data types are numeric and double. Hence, it satisfies the assumption that one variable in the study is a dependent continuous variable.
+
+2.  **Two independent variables with at least 2 levels**
+
+```{r}
+# Gender Variable
+gender_levels <- unique(politicalInterest$gender)
+unique_gender_levels_str <- paste(gender_levels, collapse = ", ")
+sentence <- paste("Gender Levels:", unique_gender_levels_str)
+print(sentence)
+
+# Education Level Variable
+educ_levels <- unique(politicalInterest$education_level)
+unique_educ_levels_str <- paste(educ_levels, collapse = ", ")
+sentence <- paste("Education Levels:", unique_educ_levels_str)
+print(sentence)
+```
+
+The `Gender` variable has two levels and the `Education Level` variable has three levels. Therefore, the independent variables have at least 2 levels
+
+3.  **Independence of observation**
+    -   Based on the given data it was assumed to have independent observations. Thus, the assumption for independent observations are satisfied.
+4.  **No significant outliers**
+
+```{r}
+politicalInterest$group = interaction(politicalInterest$gender,politicalInterest$education_level,sep="-")
+ggplot(politicalInterest, aes(x = group, y = political_interest, fill = group))+
+  geom_boxplot()+
+  theme_minimal()+
+  labs(
+    title = "Political Interest by Gender and Educational Level",
+    x = "Group (Gender - Education Lvl)",
+    y = "Political Interest"
+  )
+```
+
+As shown in the graph above, there are no significant outliers for any group interactions. Therefore, the assumption of no significant outliers is satisfied.
+
+5.  **Approximately normal distribution**
+
+```{r}
+ShapiroWilkTest <- politicalInterest %>%
+  group_by(group) %>%
+  summarise(
+    shapiro_statistic = shapiro.test(political_interest)$statistic,
+    shapiro_pValue = shapiro.test(political_interest)$p.value
+  )
+kable(ShapiroWilkTest)
+```
+
+Based on the given p-values, the data appears to be relatively normally distributed. Therefore, the assumption of normality is satisfied.
+
+6.  **Homogeneity of Variances**
+
+```{r}
+LeveneTest <- politicalInterest %>%
+  group_by(group) %>%
+  reframe(
+    leveneStatistic = leveneTest(political_interest ~ group, data = .)$`F value`,
+    levene_pValue = leveneTest(political_interest ~ group, data = .)$`Pr(>F)`
+  )
+kable(LeveneTest)
+```
+
+Based on the p-values greater than 0.05 from Levene's test for each group, we can conclude that the variances of the dependent variable are equal across all groups. Therefore, the assumption of homogeneity of variance is satisfied.
+
+
+## Analysis
+#### Descriptive Statistics of the Data
+```{r}
+kable(summary(politicalInterest))
+summaryStatsEducLvl <- politicalInterest %>% 
+  group_by(education_level) %>% 
+  summarise(
+    count = n(),
+    mean = mean(political_interest),
+    sd = sd(political_interest),
+  )
+
+summaryStatsGender <- politicalInterest %>% 
+  group_by(gender) %>% 
+  summarise(
+    count = n(),
+    mean = mean(political_interest),
+    sd = sd(political_interest),
+  )
+
+summaryStatsInteraction <- politicalInterest %>% 
+  group_by(group) %>% 
+  summarise(
+    count = n(),
+    mean = mean(political_interest),
+    sd = sd(political_interest),
+  )
+```
+
+#### Performing Two-Way ANOVA to Analyze the Data
+```{r}
+# Remove group interaction
+politicalInterest <- select(politicalInterest, -group)
+
+# Performing Two-Way ANOVA
+anova_result <- aov(political_interest ~ gender * education_level, data = politicalInterest)
+# ANOVA result summary
+anova_summary <- summary(anova_result)[[1]]
+# Create a prettier table with kable
+kable(anova_summary, format = "markdown", caption = "ANOVA Results for Political Interest")
+```
+1.  **Main Effect of Gender**
+    -   With a **p-value = 0.18704**, the analysis indicates that there is **no statistically significant main effect of gender on `political interest`**. This suggests that gender does not account for substantial variability in political interest within the sample. Therefore, political interest appears to be relatively consistent across male and female participants in this study.
+2.  **Main Effect of Education Level:**
+    -   With a **p-value < $2x10^{-16}$**, the analysis indicates a **statistically significant effect of education level on political interest**. This suggests that individuals with different levels of education (e.g., school-educated, college-educated, and university-educated) exhibit significantly different levels of political interest. Therefore, education level appears to be a strong predictor of political interest.
+3.  **Interaction Effect Between Gender and Education Level**
+    -   With a **p-value = 0.00159**, the analysis suggests a **statistically significant interaction between gender and education level**. This indicates that the effect of education level on political interest may vary depending on gender. For example, the difference in political interest between school-educated and college-educated individuals might be more pronounced for one gender compared to the other.
+
+```{r}
+# Perform Tukey's HSD test for Education Level
+tukey_education <- TukeyHSD(anova_result, "education_level")
+tukey_df <- as.data.frame(tukey_education$education_level)
+kable(tukey_df, format = "markdown", caption = "Tukey HSD Pairwise Comparisons for Education Level")
+```
+
+```{r}
+# Tukey's HSD test for the interaction (Gender × Education Level)
+tukey_interaction <- TukeyHSD(anova_result, "gender:education_level")
+tukey_interaction_df <- as.data.frame(tukey_interaction$`gender:education_level`)
+kable(tukey_interaction_df, format = "markdown", caption = "Tukey HSD Pairwise Comparisons for Gender and Education Level")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
